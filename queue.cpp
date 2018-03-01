@@ -63,5 +63,12 @@ void queue::print()
 
 int main ()
 {
-	
+	queue q;
+	q.push(5);
+	q.push(1);
+	node * ret;
+	ret = q.pop();
+	cout << ret -> info << endl;
+	ret = q.pop();
+	cout << ret -> info << endl;
 }
