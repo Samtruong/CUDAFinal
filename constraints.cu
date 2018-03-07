@@ -211,6 +211,14 @@ void ReadMMFile(const char filename[], bool** graph, int* V)
 }
 
 
+//Constraints
+int* const2(int numVertices)
+{
+  int a[numVertices];
+  for (int i = 0; i < numVertices; i++)
+    a[i] = 1;
+  return a;
+}
 //===================================Main=======================================
 void GraphColoringGPU(const char filename[])
 {
