@@ -225,7 +225,7 @@ int* const1(int * matrix, int numVertices)
 {
   //Find # of edges.
   int * toRet;
-  numEdges = 0;
+  int numEdges = 0;
   for (int i = 0; i < numVertices * numVertices; i++)
   {
     if(matrix[i])
@@ -255,6 +255,7 @@ int* const1(int * matrix, int numVertices)
     }
         
   }
+  return toRet;
 }
 
 //===================================Main=======================================
