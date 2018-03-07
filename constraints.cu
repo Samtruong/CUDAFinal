@@ -212,14 +212,51 @@ void ReadMMFile(const char filename[], bool** graph, int* V)
 
 
 //Constraints
-int* const2(int numVertices)
+int* const2(int numVertices) //This requires transpose.
 {
-  int *a;
-  a = (int*) malloc(sizeof(int) * numVertices);
+  int *toRet;
+  toRet = (int*) malloc(sizeof(int) * numVertices);
   for (int i = 0; i < numVertices; i++)
-    a[i] = 1;
-  return a;
+    toRet[i] = 1;
+  return toRet;
 }
+
+int* const1(int * matrix, int numVertices)
+{
+  //Find # of edges.
+  int * toRet;
+  numEdges = 0;
+  for (int i = 0; i < numVertices * numVertices; i++)
+  {
+    if(matrix[i])
+      numEdges++;
+  }
+  toRet = (int*) malloc(sizeof(int) * (numVertices+numEdges));
+
+  for (int i = 0; i < numVertices+numEdges; i++)
+  {
+    toRet[i] = 0;
+  }
+  //Populate the matrix to return.
+  numEdges = 0;
+  int row;
+  int col;
+  for (int i = 0; i < numVertices * numVertices; i++)
+  {
+
+    if (matrix[i])
+    {
+      row = i % numVertices;
+      col = i / numVertices;
+      toRet[numEdges* numVertices + row] = 1;
+      toRet[numEdges* numVertices + col] = 1;
+      numEdges++;
+
+    }
+        
+  }
+}
+
 //===================================Main=======================================
 void GraphColoringGPU(const char filename[])
 {
