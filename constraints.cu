@@ -214,7 +214,8 @@ void ReadMMFile(const char filename[], bool** graph, int* V)
 //Constraints
 int* const2(int numVertices)
 {
-  int a[numVertices];
+  int *a;
+  a = (int*) malloc(sizeof(int) * numVertices);
   for (int i = 0; i < numVertices; i++)
     a[i] = 1;
   return a;

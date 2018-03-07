@@ -22,7 +22,7 @@ public:
 	}
 };
 
-void queue::push(int info)
+__device__ void queue::push(int info)
 {
 	node *toInsert;
 	toInsert = new struct node;
@@ -62,7 +62,8 @@ void queue::print()
 
 __global__ void queueSim(queue q)
 {
-
+	q.push(5);
+	q.push(1);
 }
 
 int main ()
