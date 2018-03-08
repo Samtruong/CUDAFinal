@@ -221,6 +221,31 @@ int* const2(int numVertices) //This requires transpose.
   return toRet;
 }
 
+int* allConsts(int * matrix, int numVertices)
+{
+  int *toRet;
+  int numEdges = 0;
+  for (int i = 0; i < numVertices * numVertices; i++)
+  {
+    if(matrix[i])
+      numEdges++;
+  }
+
+  toRet = (int*) malloc(sizeof(int) * ((numEdges+5)*numVertices)* ());//Y dimension is 6*numVertices and X dimension is 2*numVertices;
+
+  //Constraint 1
+  for (int i = 0; i < numEdges * numVertices; i++)
+  {
+
+  }
+
+  //Constraint 2
+  for (; i < numVertices; i++)
+  {
+    toRet[]
+  }
+}
+
 int* const1(int * matrix, int numVertices)
 {
   //Find # of edges.
@@ -258,6 +283,10 @@ int* const1(int * matrix, int numVertices)
   return toRet;
 }
 
+int * const3()
+{
+
+}
 //===================================Main=======================================
 void GraphColoringGPU(const char filename[])
 {
