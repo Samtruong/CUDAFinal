@@ -221,30 +221,40 @@ int* const2(int numVertices) //This requires transpose.
   return toRet;
 }
 
-int* allConsts(int * matrix, int numVertices)
-{
-  int *toRet;
-  int numEdges = 0;
-  for (int i = 0; i < numVertices * numVertices; i++)
-  {
-    if(matrix[i])
-      numEdges++;
-  }
-
-  toRet = (int*) malloc(sizeof(int) * ((numEdges+5)*numVertices)* ());//Y dimension is 6*numVertices and X dimension is 2*numVertices;
-
-  //Constraint 1
-  for (int i = 0; i < numEdges * numVertices; i++)
-  {
-
-  }
-
-  //Constraint 2
-  for (; i < numVertices; i++)
-  {
-    toRet[]
-  }
-}
+// int* allConsts(int * matrix, int numVertices)
+// {
+//   int *toRet;
+//   int numEdges = 0;
+//   for (int i = 0; i < numVertices * numVertices; i++)
+//   {
+//     if(matrix[i])
+//       numEdges++;
+//   }
+//
+//   cudaMallocManaged(*toRet, sizeof((int) * ((numEdges+5)*numVertices)* (4*numVertices+4));
+//   // toRet = (int*) malloc(sizeof(int) * ((numEdges+5)*numVertices)* (4*numVertices+4));//Y dimension is 6*numVertices and X dimension is 2*numVertices;
+//
+//   int row;
+//   int col;
+//   //Constraint 1
+//   for (int i = 0; i < numEdges * numVertices; i++)
+//   {
+//
+//   }
+//
+//   //Constraint 2
+//   int startConstraint2 = i % (4*numVertices + 4); //The row at which const 2 matches.
+//   for (; i < numVertices; i++)
+//   {
+//     row = i % (4*numVertices + 4);
+//     col = i / (4*numVertices + 4);
+//     toRet[]
+//     for (int j = 0; j < 4; j++)
+//     {
+//       toRet[]
+//     }
+//   }
+// }
 
 int* const1(int * matrix, int numVertices)
 {
@@ -278,66 +288,117 @@ int* const1(int * matrix, int numVertices)
       numEdges++;
 
     }
-        
+
   }
   return toRet;
 }
 
-int * const3()
+__global__ void const2 (int *simplexTable, int numVertices, int numColors)
 {
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
 
+  for (int i = index; i < numVertices; i += stride)
+  {
+    for (int j = 0; j < numColors; j++)
+    {
+      simplexTable[i*(numVertices*numColors+numColors)+numColors*i+j] = 1;
+    }
+  }
 }
+
+__global__ void const1 (int *simplexTable, int numVertices, int numColors, int numEdges)
+{
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+
+  for (int i = index; i < numVertices*numEdges; i += stride)
+  {
+    int col = index % numColors;
+    simplexTable[col] = 1;
+    simplexTable[col + numColors] = 1;
+  }
+}
+
+__global__ void const3 (int *simplexTable, int numVertices, int numColors)
+{
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+
+  for (int i = index; i < numVertices*numColors; i += stride)
+  {
+    simplexTable[i*(numVertices*numColors+numColors) + i] = 1;
+    simplexTable[i*(numVertices*numColors+numColors) + numColors * numVertices + (i%numColors)] = -1;
+  }
+}
+
 //===================================Main=======================================
 void GraphColoringGPU(const char filename[])
 {
-  int * matrix;
-  int * h_graph;
-  int * sequence;
-  int * dimension;
-  int * address;
-  int * result;
-  int V;
-
-
-
-  if (string(filename).find(".col") != string::npos)
+  //cudaMallocManaged(&simplexTable, sizeof((int) * ((numEdges+5)*numVertices)* (4*numVertices+4))
+  int * simp;
+  cudaMallocManaged(&simp, sizeof(int) * 16*20);
+  for (int i = 0; i < 16*20; i++)
   {
-    getDimension(filename, &V);
-    cudaError_t result = cudaMallocManaged(&matrix,sizeof(int)*V*V);
-    ReadColFile(filename,matrix,V);
+    simp[i] = 0;
   }
-  /*
-  else if (string(filename).find(".mm") != string::npos)
-     ReadMMFile(filename, matrix, V);*/
-
-
-  cudaMallocManaged(&sequence, sizeof(int) * V );
-  cudaMallocManaged(&dimension,sizeof(int)*V);
-  cudaMallocManaged(&address,sizeof(int)*V);
-  cudaMallocManaged(&result, sizeof(int) *V);
-
-
-  DimensionGenerator<<<256,1024>>>(matrix,dimension,address,V);
+  const3<<<1,1>>>(simp, 4, 4);
   cudaDeviceSynchronize();
-  thrust::exclusive_scan(thrust::host,dimension,&dimension[V],address);
-  cudaMallocManaged(&h_graph,sizeof(int)* (dimension[V-1]+address[V-1]));
-
-  GraphGenerator<<<256,1024>>>(matrix,dimension,address,h_graph,V);
-  cudaDeviceSynchronize();
-
-
-  cudaFree(h_graph);
-  cudaFree(dimension);
-  cudaFree(sequence);
-  cudaFree(address);
-  cudaFree(matrix);
-  cudaFree(result);
+  for (int i = 0; i < 16*20; i++)
+  {
+    cout << simp[i] << " ";
+    if (i%20==19) cout << endl;
+  }
+  cout<<endl;
+  cudaFree(simp);
+  // int * matrix;
+  // int * h_graph;
+  // int * sequence;
+  // int * dimension;
+  // int * address;
+  // int * result;
+  // int V;
+  //
+  //
+  //
+  // if (string(filename).find(".col") != string::npos)
+  // {
+  //   getDimension(filename, &V);
+  //   cudaError_t result = cudaMallocManaged(&matrix,sizeof(int)*V*V);
+  //   ReadColFile(filename,matrix,V);
+  // }
+  // /*
+  // else if (string(filename).find(".mm") != string::npos)
+  //    ReadMMFile(filename, matrix, V);*/
+  //
+  //
+  // cudaMallocManaged(&sequence, sizeof(int) * V );
+  // cudaMallocManaged(&dimension,sizeof(int)*V);
+  // cudaMallocManaged(&address,sizeof(int)*V);
+  // cudaMallocManaged(&result, sizeof(int) *V);
+  //
+  //
+  // DimensionGenerator<<<256,1024>>>(matrix,dimension,address,V);
+  // cudaDeviceSynchronize();
+  // thrust::exclusive_scan(thrust::host,dimension,&dimension[V],address);
+  // cudaMallocManaged(&h_graph,sizeof(int)* (dimension[V-1]+address[V-1]));
+  //
+  // GraphGenerator<<<256,1024>>>(matrix,dimension,address,h_graph,V);
+  // cudaDeviceSynchronize();
+  //
+  //
+  // cudaFree(h_graph);
+  // cudaFree(dimension);
+  // cudaFree(sequence);
+  // cudaFree(address);
+  // cudaFree(matrix);
+  // cudaFree(result);
 
 }
 
 int main(int argc, char const *argv[]) {
 
-  GraphColoringGPU(argv[1]);
 
+  GraphColoringGPU(argv[1]);
   return 0;
 }
