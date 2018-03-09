@@ -1,45 +1,24 @@
-#include <iostream>
-using namespace std;
-
-__global__ void ratioCalculator(double** SimplexTableau, double* theta,
-                                                double* Columnk, int k)
+#define TOTAL_BLOCKS 256;
+__global__ void branchAndBound(int upperBound,int* done1, int* done2,
+int* length1, int* length2, double** TableauList1, double** TableauList2)
 {
-  int index = blockDim.x*blockIdx.x + threadIdx.x;
-  double w = SimplexTableau[index][k];
-  Columnk[index] = w;
-  theta[index] = SimplexTableau[index][1]/w;
-}
-
-__global__ void normalizePivotRow( double** SimplexTableau, double* k, int k, int r)
-{
-  int index = blockDim.x*blockIdx.x + threadIdx.x;
-  __shared__ double w;
-  if(threadIdx.x == 0){w = Columnk[r];}
-  __syncthreads();
-  SimplexTableau[r][index] = SimplexTableau[r][index]/w;
-}
-
-__global__ void updateAllRows(double** SimplexTableau, double* Columnk, int k, int r)
-{
-  int xIndex = blockDim.x*blockIdx.x + threadIdx.x;
-  int yIndex = blockDim.y*blockIdx.y + threadIdx.y;
-  __shared__ double w[16];
-  if(threadIdx.y == 0 && threadIdx.x <16)
+  __shared__ double* SimplexTableau;
+  int* length;
+  __shared__ int* done;
+  __shared__ double** tablelist;
+  while(*done1 != TOTAL_BLOCKS || *done2 != TOTAL_BLOCKS)//when there are still jobs
   {
-    w[threadIdx.x] = Columnk[blockIdx.y*blockDim.y+threadIdx.x];
+    /*
+      FIGURE IT OUT WHICH ARRAY TO USE HERE!!!!
+    */
+    if(threadIdx.x == 0){atomicAdd(*done,-1);} //signify this block is busy
+    for(i = blockIdx.x; i < length; i+=gridDim.x)
+    {
+      if(threadIdx.x == 0)
+      {
+        SimplexTableau = TableauList[i];
+      }
+    }
+    if(threadIdx.x == 0){atomicAdd(*done,1);}
   }
-  __syncthreads();
-  if(yIndex == r) return;
-  SimplexTableau[yIndex][xIndex] = SimplexTableau[yIndex][xIndex] - w[threadIdx.y]
-                                  *SimplexTableau[r][xIndex];
-}
-
-__global__ void updateSimplexTableau(double** SimplexTableau, double* Columnk, int k, int r)
-{
-  int index = blockDim.x*blockIdx.x + threadIdx.x;
-  __shared__ double w;
-  if(threadIdx.x == 0){w = Columnk[r]}
-  __syncthreads();
-  SimplexTableau[index][k] = -Columnk[index]/w;
-  if(index == r){SimplexTableau[index][k]=1/w;}
 }

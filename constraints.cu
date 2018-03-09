@@ -321,7 +321,7 @@ void getInfo(const char filename[], int* numEdges, int* numVertices)
 
 
 
-__global__ void constraint1 (int *simplexTable, int* edgeList, int numColors, int numEdges, int numVertices)
+__global__ void constraint1 (double *simplexTable, int* edgeList, int numColors, int numEdges, int numVertices)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   int stride = blockDim.x * gridDim.x;
@@ -329,13 +329,13 @@ __global__ void constraint1 (int *simplexTable, int* edgeList, int numColors, in
   {
     for(int j = 0; j < numColors; j++)
     {
-      simplexTable[(numColors*i+j)*(numVertices*numColors+numColors)+(edgeList[2*i]-1) * numColors+j] = 1;
-      simplexTable[(numColors*i+j)*(numVertices*numColors+numColors)+(edgeList[2*i+1]-1) * numColors+j] = 1;
+      simplexTable[(numColors*i+j)*(numVertices*numColors+numColors)+(edgeList[2*i]-1) * numColors+j] = 1.0;
+      simplexTable[(numColors*i+j)*(numVertices*numColors+numColors)+(edgeList[2*i+1]-1) * numColors+j] = 1.0;
     }
   }
 }
 
-__global__ void constraint2 (int *simplexTable, int numVertices, int numColors)
+__global__ void constraint2 (double *simplexTable, int numVertices, int numColors)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   int stride = blockDim.x * gridDim.x;
@@ -344,20 +344,20 @@ __global__ void constraint2 (int *simplexTable, int numVertices, int numColors)
   {
     for (int j = 0; j < numColors; j++)
     {
-      simplexTable[i*(numVertices*numColors+numColors)+numColors*i+j] = 1;
+      simplexTable[i*(numVertices*numColors+numColors)+numColors*i+j] = 1.0;
     }
   }
 }
 
-__global__ void constraint3 (int *simplexTable, int numVertices, int numColors)
+__global__ void constraint3 (double *simplexTable, int numVertices, int numColors)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   int stride = blockDim.x * gridDim.x;
 
   for (int i = index; i < numVertices*numColors; i += stride)
   {
-    simplexTable[i*(numVertices*numColors+numColors) + i] = 1;
-    simplexTable[i*(numVertices*numColors+numColors) + numColors * numVertices + (i%numColors)] = -1;
+    simplexTable[i*(numVertices*numColors+numColors) + i] = 1.0;
+    simplexTable[i*(numVertices*numColors+numColors) + numColors * numVertices + (i%numColors)] = -1.0;
   }
 }
 
@@ -365,6 +365,7 @@ __global__ void constraint3 (int *simplexTable, int numVertices, int numColors)
 void constraintGenerator(const char filename[])
 {
   //cudaMallocManaged(&simplexTable, sizeof((int) * ((numEdges+5)*numVertices)* (4*numVertices+4))
+  int numColors = 2;
   int numEdges;
   int numVertices;
   if (string(filename).find(".col") != string::npos)
@@ -382,15 +383,20 @@ void constraintGenerator(const char filename[])
   {
     simp[i] = 0;
   }
-  constraint1<<<1,1>>>(simp, edgeList,2,numEdges,numVertices);
+   double* simplexTable;
+   cudaMallocManaged(&simplexTable, (numColors*numVertices + numVertices) * (numEdges*numColors + numVertices + numColors*numVertices));
+  constraint1<<<1,1>>>(simplexTable, edgeList,numColors,numEdges,numVertices);
+  constraint2<<<1,1>>>(simplexTable + ((numColors*numVertices + numColors)*(numEdges*numColors)), numVertices, numColors);
+  constraint3<<<1,1>>>(simplexTable + ((numColors*numVertices + numColors)*(numEdges*numColors + numVertices)) , numVertices, numColors);
   cudaDeviceSynchronize();
-  // for (int i = 0; i < numEdges*2*10; i++)
-  // {
-  //   cout << simp[i] << " ";
-  //   if (i%10==9) cout << endl;
-  // }
-  // cout<<endl;
+  for (int i = 0; i < (numColors*numVertices + numColors)*(numEdges*numColors + numVertices + numColors*numVertices); i++)
+  {
+    cout << simplexTable[i] << " ";
+    if (i%10==9) cout << endl;
+  }
+  cout<<endl;
   cudaFree(simp);
+  cudaFree(simplexTable);
 
 }
 
