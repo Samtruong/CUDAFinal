@@ -13,213 +13,189 @@
 
 using namespace std;
 
+//
+// __global__ void GraphGenerator(int* matrix,int* dimension, int* address, int* h_graph, int V)
+// {
+//   int index = threadIdx.x + blockDim.x * blockIdx.x;
+//   int stride = blockDim.x * gridDim.x;
+//   for(int i = index; i < V; i += stride)
+//   {
+//     int a = address[i];
+//     int j = 0;
+//     for (int k = 0; k < V; k++)
+//     {
+//       if (matrix[i*V + k])
+//       {
+//         h_graph[a + j] = k;
+//         j++;
+//       }
+//     }
+//   }
+// }
+//
+// __global__ void DimensionGenerator(int* matrix, int* dimension, int* address, int V)
+// {
+//   int index = threadIdx.x + blockDim.x * blockIdx.x;
+//   int stride = blockDim.x * gridDim.x;
+//   for(int i = index; i < V; i += stride)
+//   {
+//     for (int j = 0; j < V; j++)
+//     {
+//       if(matrix[i*V + j])
+//       {
+//         dimension[i]++;
+//       }
+//     }
+//   }
+//   __syncthreads();
+// }
+//
+//
+// //================================Utility Functions=======================================
+// void CountColors(int V,int length, int* color, int &minColors, int &minIndex)
+// {
+// 	//int minColors = INT_MAX;
+// 	//int minIndex;
+//    int *num_colors;
+// 	num_colors = (int*) malloc(sizeof(int) * length);
+// 	for (int i = 0; i < length; i++)
+// 	{
+// 		num_colors[i] = 0;
+// 	}
+//    set<int> seen_colors;
+//
+//    for (int i = 0; i < length; i++) {
+//       if (seen_colors.find(color[i]) == seen_colors.end())
+//       {
+//          seen_colors.insert(color[i]);
+//          num_colors[i/V]++;
+//       }
+//       if(i%V==V-1)
+//       {
+//         //cout<<num_colors[i/V]<<endl;
+// 	if (num_colors[i/V] < minColors)
+// 	{
+// 		minColors = num_colors[i/V];
+// 		minIndex = i / V;
+// 	}
+//         seen_colors.clear();
+//         //num_colors = 0;
+//       }
+//    }
+// }
+//
+// bool IsValidColoring(int* graph, int V, int* color)
+// {
+//    for (int i = 0; i < V; i++) {
+//       for (int j = 0; j < V; j++) {
+//          if (graph[i * V + j]) {
+//             if (i != j && color[i] == color[j]) {
+//                printf("Vertex %d and Vertex %d are connected and have the same color %d\n", i, j, color[i]);
+//                return false;
+//             }
+//             if (color[i] < 1) {
+//                printf("Vertex %d has invalid color %d\n", i, color[i]);
+//
+//             }
+//          }
+//       }
+//    }
+//
+//    return true;
+// }
+//
+// //Load raw .co data
+// void getDimension(const char filename[], int* V)
+// {
+//    string line;
+//    ifstream infile(filename);
+//    if (infile.fail()) {
+//       printf("Failed to open %s\n", filename);
+//       return;
+//    }
+//
+//    int num_rows;
+//
+//    while (getline(infile, line))
+//    {
+//       istringstream iss(line);
+//       string s;
+//       iss >> s;
+//       if (s == "p") {
+//          iss >> s; // read string "edge"
+//          iss >> num_rows;
+//          *V = num_rows;
+//          break;
+//       }
+//    }
+//    infile.close();
+// }
 
-__global__ void GraphGenerator(int* matrix,int* dimension, int* address, int* h_graph, int V)
-{
-  int index = threadIdx.x + blockDim.x * blockIdx.x;
-  int stride = blockDim.x * gridDim.x;
-  for(int i = index; i < V; i += stride)
-  {
-    int a = address[i];
-    int j = 0;
-    for (int k = 0; k < V; k++)
-    {
-      if (matrix[i*V + k])
-      {
-        h_graph[a + j] = k;
-        j++;
-      }
-    }
-  }
-}
 
-__global__ void DimensionGenerator(int* matrix, int* dimension, int* address, int V)
-{
-  int index = threadIdx.x + blockDim.x * blockIdx.x;
-  int stride = blockDim.x * gridDim.x;
-  for(int i = index; i < V; i += stride)
-  {
-    for (int j = 0; j < V; j++)
-    {
-      if(matrix[i*V + j])
-      {
-        dimension[i]++;
-      }
-    }
-  }
-  __syncthreads();
-}
-
-
-//================================Utility Functions=======================================
-void CountColors(int V,int length, int* color, int &minColors, int &minIndex)
-{
-	//int minColors = INT_MAX;
-	//int minIndex;
-   int *num_colors;
-	num_colors = (int*) malloc(sizeof(int) * length);
-	for (int i = 0; i < length; i++)
-	{
-		num_colors[i] = 0;
-	}
-   set<int> seen_colors;
-
-   for (int i = 0; i < length; i++) {
-      if (seen_colors.find(color[i]) == seen_colors.end())
-      {
-         seen_colors.insert(color[i]);
-         num_colors[i/V]++;
-      }
-      if(i%V==V-1)
-      {
-        //cout<<num_colors[i/V]<<endl;
-	if (num_colors[i/V] < minColors)
-	{
-		minColors = num_colors[i/V];
-		minIndex = i / V;
-	}
-        seen_colors.clear();
-        //num_colors = 0;
-      }
-   }
-}
-
-bool IsValidColoring(int* graph, int V, int* color)
-{
-   for (int i = 0; i < V; i++) {
-      for (int j = 0; j < V; j++) {
-         if (graph[i * V + j]) {
-            if (i != j && color[i] == color[j]) {
-               printf("Vertex %d and Vertex %d are connected and have the same color %d\n", i, j, color[i]);
-               return false;
-            }
-            if (color[i] < 1) {
-               printf("Vertex %d has invalid color %d\n", i, color[i]);
-
-            }
-         }
-      }
-   }
-
-   return true;
-}
-
-//Load raw .co data
-void getDimension(const char filename[], int* V)
-{
-   string line;
-   ifstream infile(filename);
-   if (infile.fail()) {
-      printf("Failed to open %s\n", filename);
-      return;
-   }
-
-   int num_rows;
-
-   while (getline(infile, line))
-   {
-      istringstream iss(line);
-      string s;
-      iss >> s;
-      if (s == "p") {
-         iss >> s; // read string "edge"
-         iss >> num_rows;
-         *V = num_rows;
-         break;
-      }
-   }
-   infile.close();
-}
-
-void ReadColFile(const char filename[], int* graph, int V)
-{
-   string line;
-   ifstream infile(filename);
-   if (infile.fail()) {
-      printf("Failed to open %s\n", filename);
-      return;
-   }
-
-   while (getline(infile, line)) {
-      istringstream iss(line);
-      string s;
-      int node1, node2;
-      iss >> s;
-      if (s != "e")
-         continue;
-
-      iss >> node1 >> node2;
-
-      // Assume node numbering starts at 1
-      (graph)[(node1 - 1) * V + (node2 - 1)] = 1;
-      (graph)[(node2 - 1) * V + (node1 - 1)] = 1;
-   }
-   infile.close();
-}
-
-//print graph Matrix
-void PrintMatrix(int* matrix, int M, int N) {
-   for (int row=0; row<M; row++)
-   {
-      for(int columns=0; columns<N; columns++)
-      {
-         printf("%i", matrix[row * N + columns]);
-      }
-      printf("\n");
-   }
-}
+// //print graph Matrix
+// void PrintMatrix(int* matrix, int M, int N) {
+//    for (int row=0; row<M; row++)
+//    {
+//       for(int columns=0; columns<N; columns++)
+//       {
+//          printf("%i", matrix[row * N + columns]);
+//       }
+//       printf("\n");
+//    }
+// }
 
 
 // Read MatrixMarket graphs
-// Assumes input nodes are numbered starting from 1
-void ReadMMFile(const char filename[], bool** graph, int* V)
-{
-   string line;
-   ifstream infile(filename);
-   if (infile.fail()) {
-      printf("Failed to open %s\n", filename);
-      return;
-   }
+// // Assumes input nodes are numbered starting from 1
+// void ReadMMFile(const char filename[], bool** graph, int* V)
+// {
+//    string line;
+//    ifstream infile(filename);
+//    if (infile.fail()) {
+//       printf("Failed to open %s\n", filename);
+//       return;
+//    }
+//
+//    // Reading comments
+//    while (getline(infile, line)) {
+//       istringstream iss(line);
+//       if (line.find('%') == string::npos)
+//          break;
+//    }
+//
+//    // Reading metadata
+//    istringstream iss(line);
+//    int num_rows, num_cols, num_edges;
+//    iss >> num_rows >> num_cols >> num_edges;
+//
+//    *graph = new bool[num_rows * num_rows];
+//    memset(*graph, 0, num_rows * num_rows * sizeof(bool));
+//    *V = num_rows;
+//
+//    // Reading nodes
+//    while (getline(infile, line)) {
+//       istringstream iss(line);
+//       int node1, node2, weight;
+//       iss >> node1 >> node2 >> weight;
+//
+//       // Assume node numbering starts at 1
+//       (*graph)[(node1 - 1) * num_rows + (node2 - 1)] = true;
+//       (*graph)[(node2 - 1) * num_rows + (node1 - 1)] = true;
+//    }
+//    infile.close();
+// }
 
-   // Reading comments
-   while (getline(infile, line)) {
-      istringstream iss(line);
-      if (line.find('%') == string::npos)
-         break;
-   }
 
-   // Reading metadata
-   istringstream iss(line);
-   int num_rows, num_cols, num_edges;
-   iss >> num_rows >> num_cols >> num_edges;
-
-   *graph = new bool[num_rows * num_rows];
-   memset(*graph, 0, num_rows * num_rows * sizeof(bool));
-   *V = num_rows;
-
-   // Reading nodes
-   while (getline(infile, line)) {
-      istringstream iss(line);
-      int node1, node2, weight;
-      iss >> node1 >> node2 >> weight;
-
-      // Assume node numbering starts at 1
-      (*graph)[(node1 - 1) * num_rows + (node2 - 1)] = true;
-      (*graph)[(node2 - 1) * num_rows + (node1 - 1)] = true;
-   }
-   infile.close();
-}
-
-
-//Constraints
-int* const2(int numVertices) //This requires transpose.
-{
-  int *toRet;
-  toRet = (int*) malloc(sizeof(int) * numVertices);
-  for (int i = 0; i < numVertices; i++)
-    toRet[i] = 1;
-  return toRet;
-}
+//Constraints=======================================================================================
+//
+// int* const2(int numVertices) //This requires transpose.
+// {
+//   int *toRet;
+//   toRet = (int*) malloc(sizeof(int) * numVertices);
+//   for (int i = 0; i < numVertices; i++)
+//     toRet[i] = 1;
+//   return toRet;
+// }
 
 // int* allConsts(int * matrix, int numVertices)
 // {
@@ -256,44 +232,110 @@ int* const2(int numVertices) //This requires transpose.
 //   }
 // }
 
-int* const1(int * matrix, int numVertices)
+// int* const1(int * matrix, int numVertices)
+// {
+//   //Find # of edges.
+//   int * toRet;
+//   int numEdges = 0;
+//   for (int i = 0; i < numVertices * numVertices; i++)
+//   {
+//     if(matrix[i])
+//       numEdges++;
+//   }
+//   toRet = (int*) malloc(sizeof(int) * (numVertices+numEdges));
+//
+//   for (int i = 0; i < numVertices+numEdges; i++)
+//   {
+//     toRet[i] = 0;
+//   }
+//   //Populate the matrix to return.
+//   numEdges = 0;
+//   int row;
+//   int col;
+//   for (int i = 0; i < numVertices * numVertices; i++)
+//   {
+//
+//     if (matrix[i])
+//     {
+//       row = i % numVertices;
+//       col = i / numVertices;
+//       toRet[numEdges* numVertices + row] = 1;
+//       toRet[numEdges* numVertices + col] = 1;
+//       numEdges++;
+//
+//     }
+//
+//   }
+//   return toRet;
+// }
+void readEdgesPosition(const char filename[], int* edgeList)
 {
-  //Find # of edges.
-  int * toRet;
-  int numEdges = 0;
-  for (int i = 0; i < numVertices * numVertices; i++)
-  {
-    if(matrix[i])
-      numEdges++;
-  }
-  toRet = (int*) malloc(sizeof(int) * (numVertices+numEdges));
+   string line;
+   ifstream infile(filename);
+   if (infile.fail()) {
+      printf("Failed to open %s\n", filename);
+      return;
+   }
 
-  for (int i = 0; i < numVertices+numEdges; i++)
-  {
-    toRet[i] = 0;
-  }
-  //Populate the matrix to return.
-  numEdges = 0;
-  int row;
-  int col;
-  for (int i = 0; i < numVertices * numVertices; i++)
-  {
+   int i=0;
+   while (getline(infile, line)) {
+      istringstream iss(line);
+      string s;
+      int node1, node2;
+      iss >> s;
+      if (s != "e")
+         continue;
 
-    if (matrix[i])
-    {
-      row = i % numVertices;
-      col = i / numVertices;
-      toRet[numEdges* numVertices + row] = 1;
-      toRet[numEdges* numVertices + col] = 1;
-      numEdges++;
+      iss >> node1 >> node2;
 
-    }
+      edgeList[2*i] = node1;
+      edgeList[2*i+1] = node2;
+      i++;
 
-  }
-  return toRet;
+   }
+   infile.close();
 }
 
-__global__ void const2 (int *simplexTable, int numVertices, int numColors)
+void getInfo(const char filename[], int* numEdges, int* numVertices)
+{
+   string line;
+   ifstream infile(filename);
+   if (infile.fail()) {
+      printf("Failed to open %s\n", filename);
+      return;
+   }
+
+   while (getline(infile, line)) {
+      istringstream iss(line);
+      string s,node1;
+      iss >> s;
+      if (s != "p")
+         continue;
+
+      iss >> node1 >> *numVertices >> *numEdges;
+
+      // Assume node numbering starts at 1
+   }
+   infile.close();
+}
+
+
+
+__global__ void constraint1 (int *simplexTable, int* edgeList, int numColors, int numEdges, int numVertices)
+{
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  int stride = blockDim.x * gridDim.x;
+  for(int i = index; i < numEdges; i+=stride)
+  {
+    for(int j = 0; j < numColors; j++)
+    {
+      simplexTable[(numColors*i+j)*(numVertices*numColors+numColors)+(edgeList[2*i]-1) * numColors+j] = 1;
+      simplexTable[(numColors*i+j)*(numVertices*numColors+numColors)+(edgeList[2*i+1]-1) * numColors+j] = 1;
+    }
+  }
+}
+
+__global__ void constraint2 (int *simplexTable, int numVertices, int numColors)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   int stride = blockDim.x * gridDim.x;
@@ -307,20 +349,7 @@ __global__ void const2 (int *simplexTable, int numVertices, int numColors)
   }
 }
 
-__global__ void const1 (int *simplexTable, int numVertices, int numColors, int numEdges)
-{
-  int index = blockIdx.x * blockDim.x + threadIdx.x;
-  int stride = blockDim.x * gridDim.x;
-
-  for (int i = index; i < numVertices*numEdges; i += stride)
-  {
-    int col = index % numColors;
-    simplexTable[col] = 1;
-    simplexTable[col + numColors] = 1;
-  }
-}
-
-__global__ void const3 (int *simplexTable, int numVertices, int numColors)
+__global__ void constraint3 (int *simplexTable, int numVertices, int numColors)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   int stride = blockDim.x * gridDim.x;
@@ -333,72 +362,41 @@ __global__ void const3 (int *simplexTable, int numVertices, int numColors)
 }
 
 //===================================Main=======================================
-void GraphColoringGPU(const char filename[])
+void constraintGenerator(const char filename[])
 {
   //cudaMallocManaged(&simplexTable, sizeof((int) * ((numEdges+5)*numVertices)* (4*numVertices+4))
+  int numEdges;
+  int numVertices;
+  if (string(filename).find(".col") != string::npos)
+  {
+    getInfo(filename, &numEdges, &numVertices);
+  }
+
+  int* edgeList;
+  cudaMallocManaged(&edgeList,sizeof(int)*2*numEdges);
+  readEdgesPosition(filename,edgeList);
+
   int * simp;
-  cudaMallocManaged(&simp, sizeof(int) * 16*20);
+  cudaMallocManaged(&simp, sizeof(int) *numEdges*2*10);
   for (int i = 0; i < 16*20; i++)
   {
     simp[i] = 0;
   }
-  const3<<<1,1>>>(simp, 4, 4);
+  constraint1<<<1,1>>>(simp, edgeList,2,numEdges,numVertices);
   cudaDeviceSynchronize();
-  for (int i = 0; i < 16*20; i++)
-  {
-    cout << simp[i] << " ";
-    if (i%20==19) cout << endl;
-  }
-  cout<<endl;
-  cudaFree(simp);
-  // int * matrix;
-  // int * h_graph;
-  // int * sequence;
-  // int * dimension;
-  // int * address;
-  // int * result;
-  // int V;
-  //
-  //
-  //
-  // if (string(filename).find(".col") != string::npos)
+  // for (int i = 0; i < numEdges*2*10; i++)
   // {
-  //   getDimension(filename, &V);
-  //   cudaError_t result = cudaMallocManaged(&matrix,sizeof(int)*V*V);
-  //   ReadColFile(filename,matrix,V);
+  //   cout << simp[i] << " ";
+  //   if (i%10==9) cout << endl;
   // }
-  // /*
-  // else if (string(filename).find(".mm") != string::npos)
-  //    ReadMMFile(filename, matrix, V);*/
-  //
-  //
-  // cudaMallocManaged(&sequence, sizeof(int) * V );
-  // cudaMallocManaged(&dimension,sizeof(int)*V);
-  // cudaMallocManaged(&address,sizeof(int)*V);
-  // cudaMallocManaged(&result, sizeof(int) *V);
-  //
-  //
-  // DimensionGenerator<<<256,1024>>>(matrix,dimension,address,V);
-  // cudaDeviceSynchronize();
-  // thrust::exclusive_scan(thrust::host,dimension,&dimension[V],address);
-  // cudaMallocManaged(&h_graph,sizeof(int)* (dimension[V-1]+address[V-1]));
-  //
-  // GraphGenerator<<<256,1024>>>(matrix,dimension,address,h_graph,V);
-  // cudaDeviceSynchronize();
-  //
-  //
-  // cudaFree(h_graph);
-  // cudaFree(dimension);
-  // cudaFree(sequence);
-  // cudaFree(address);
-  // cudaFree(matrix);
-  // cudaFree(result);
+  // cout<<endl;
+  cudaFree(simp);
 
 }
 
 int main(int argc, char const *argv[]) {
 
 
-  GraphColoringGPU(argv[1]);
+  constraintGenerator(argv[1]);
   return 0;
 }
