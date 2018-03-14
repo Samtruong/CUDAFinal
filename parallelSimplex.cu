@@ -65,6 +65,7 @@ if (threadIdx.x == 0)
   othertableList = othertableListCPU;
   printf("Thread 0 done copying.\n");
 }
+localDone = false;
   // while(!(((*done2 == numblocks) && (*length1 == 0)) || ((*done1 == numblocks) && (*length2 == 0))))
   // {//if there are jobs in either array, we will keep the kernel alive.
   //
@@ -176,7 +177,8 @@ int main ()
     *done2 = 0;
      printf("Kernel called\n");
     branchAndBound<<<numblocks, 1>>> (numblocks,10, done, length, otherLength, tableList, othertableList);
-    cudaDeviceSynchronize();
+    printf("kernel done\n");
+	cudaDeviceSynchronize();
   }
   cudaDeviceSynchronize();
   // branchAndBound<<<numblocks, 1>>> (numblocks,10, done1, done2, length1, length2, tableList1, tableList2);
