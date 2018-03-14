@@ -3,9 +3,6 @@
 #include <curand.h>
 #include <curand_kernel.h>
 #include <iostream>
-
-#define TOTAL_BLOCKS 256;
-
 using namespace std;
 
 __device__ int policy(double currentJob, double * leftChild, double * rightChild)
@@ -40,68 +37,71 @@ __device__ int policy(double currentJob, double * leftChild, double * rightChild
     return 0;
 }
 
-__global__ void branchAndBound(int upperBound, int* done1, int* done2,
-int* length1, int* length2, double* TableauList1, double* TableauList2)
+
+__global__ void branchAndBound(int numblocks,int upperBound, int* doneCPU, int* lengthCPU, int* otherLengthCPU,
+  double* tableListCPU, double* othertableListCPU)
 {
-  // printf("hello1\n");
-  //__shared__ double* SimplexTableau;
-  __shared__ int* length; //why pointer?
+  __shared__ int* length;
   __shared__ int* otherLength;
   __shared__ int* done;
-  __shared__ double* tablelist;
-  __shared__ double* otherTablelist;
+  __shared__ double* tableList;
+  __shared__ double* othertableList;
   __shared__ double currentJob;
   __shared__ int action;
   __shared__ bool localDone;
-  // printf("hello2\n");
-//Assign shared memory to passed in values.
+  __shared__ int index;
+  __shared__ int stride;
 
-int numblocks = 2;
-  // printf("done2 %d, length1 %d, done1 %d, length2 %d\n", *done2, *length1, *done1, *length2);
-   while(!(((*done2 == numblocks) && (*length1 == 0)) || ((*done1 == numblocks) && (*length2 == 0))))//when there are still jobs
-  {
-     // printf("About to enter while loop\n");
-     localDone = 0;
-    if (*done1 == numblocks) //start with 2
-    {
-      done = done2;
-      tablelist = TableauList2;
-      otherTablelist = TableauList1;
-      length = length2;
-      otherLength = length1;
-      *done1 = 0;
-    }
+  index = blockIdx.x;
+  stride = gridDim.x;
 
-    else //start with 1
-    {
-      done = done1;
-      tablelist = TableauList1;
-      otherTablelist = TableauList2;
-      length = length1;
-      otherLength = length2;
-      *done2 = 0;
-    }
+if (threadIdx.x == 0)
+{
+
+  length = lengthCPU;
+  otherLength = otherLengthCPU;
+  done = doneCPU;
+  tableList = tableListCPU;
+  othertableList = othertableListCPU;
+  printf("Thread 0 done copying.\n");
+}
+  // while(!(((*done2 == numblocks) && (*length1 == 0)) || ((*done1 == numblocks) && (*length2 == 0))))
+  // {//if there are jobs in either array, we will keep the kernel alive.
+  //
+  //   localDone = false;
+  //   /*The following if else statements are used to determined which array to process */
+  //   if (*done1 == numblocks){
+  //     done = done2;
+  //     tableList = tableList2;
+  //     othertableList = tableList1;
+  //     length = length2;
+  //     otherLength = length1;
+  //   }
+  //   else{
+  //     done = done1;
+  //     tableList = tableList1;
+  //     othertableList = tableList2;
+  //     length = length1;
+  //     otherLength = length2;
+  //   }
+  //   *otherLength = 0;
+  //   *done1 = 0;
+  //   *done2 = 0;
+
     while (*done != numblocks)
-    {
-      if(!localDone)
-      {
-        // printf("inside if\n");
-        int index = blockIdx.x;
-        int stride = gridDim.x;
+    {//if not everyone is done with the current array.
+      if(localDone == false)
+      {//if I am not done with the current array
         for (int i = index; i < *length; i+= stride)
-        {
-          if (threadIdx.x == 0) //Load a job for current block.
-          {
-            currentJob = tablelist[i];
-          }
+        {//fetch all jobs I am suppose to process
+          if (threadIdx.x == 0){currentJob = tableList[i];}
           __syncthreads();
+
           double * leftChild, * rightChild;
           leftChild = (double*) malloc(sizeof(double));
           rightChild = (double*) malloc(sizeof (double));
           action = policy(currentJob, leftChild, rightChild);
-          // printf("otherLength %d\n", *otherLength);
-          // printf("current job %f\n leftChild %f\n rightChild %f\n", currentJob, *leftChild, *rightChild);
-          // printf("otherLength %d\n", *otherLength);
+
           if (threadIdx.x == 0)
           {
             if(action == 0) // BOUND
@@ -109,33 +109,26 @@ int numblocks = 2;
             else // BRANCH
             {
               atomicAdd(otherLength, 2);
-              // printf("otherLength %d\n", *otherLength);
-              otherTablelist[(*otherLength) - 2] = *leftChild;
-              otherTablelist[(*otherLength) - 1] = *rightChild;
-              // printf("leftChild %f\n", *leftChild);
-              // printf("rightChild %f\n", *rightChild);
+              othertableList[(*otherLength) - 2] = *leftChild;
+              othertableList[(*otherLength) - 1] = *rightChild;
             }
           }
-        }
-        if (threadIdx.x == 0)
-        {
-          atomicAdd(done, 1);
-          localDone = 1;
-        }
+          __syncthreads();
+        }//after for loop, I will run out of job, I will wait for other to be done
+        if (threadIdx.x == 0){atomicAdd(done, 1);localDone = true; printf("atomic add performed on done %d\n", *done);}
         __syncthreads();
-      }//do operation
-      *length = 0;
+      }
     }
-  }
+  //}
 }
 
 
 int main ()
 {
-  double *TableauList1, * TableauList2;
-  cudaMallocManaged(&TableauList1, sizeof(double) * 10);
-  cudaMallocManaged(&TableauList2, sizeof(double) * 10);
-  *TableauList1 = 1.0;
+  double *tableList1, * tableList2;
+  cudaMallocManaged(&tableList1, sizeof(double) * 10);
+  cudaMallocManaged(&tableList2, sizeof(double) * 10);
+  *tableList1 = 1.0;
   int * done1;
   cudaMallocManaged(&done1, sizeof(int));
   *done1 = 0;
@@ -148,24 +141,66 @@ int main ()
   int * length2;
   cudaMallocManaged(&length2, sizeof(int));
   *length2 = 0;
-  branchAndBound<<<2, 1>>> (10, done1, done2, length1, length2, TableauList1, TableauList2);
+  int numblocks = 1;
 
+  //CPU Logic
+  int *done;
+  cudaMallocManaged(&done, sizeof(int));
+  double *tableList;
+  cudaMallocManaged(&tableList, sizeof(double) * 10);
+  double *othertableList;
+  cudaMallocManaged(&othertableList, sizeof(double) * 10);
+  int *length;
+  cudaMallocManaged(&length, sizeof(int));
+  int *otherLength;
+  cudaMallocManaged(&otherLength, sizeof(int));
+
+  while(!(((*done2 == numblocks) && (*length1 == 0)) || ((*done1 == numblocks) && (*length2 == 0))))
+  {
+    if (*done1 == numblocks){
+      done = done2;
+      tableList = tableList2;
+      othertableList = tableList1;
+      length = length2;
+      otherLength = length1;
+    }
+    else{
+      done = done1;
+      tableList = tableList1;
+      othertableList = tableList2;
+      length = length1;
+      otherLength = length2;
+    }
+    *otherLength = 0;
+    *done1 = 0;
+    *done2 = 0;
+     printf("Kernel called\n");
+    branchAndBound<<<numblocks, 1>>> (numblocks,10, done, length, otherLength, tableList, othertableList);
+    cudaDeviceSynchronize();
+  }
   cudaDeviceSynchronize();
+  // branchAndBound<<<numblocks, 1>>> (numblocks,10, done1, done2, length1, length2, tableList1, tableList2);
+  // cudaDeviceSynchronize();
   for (int i = 0; i < 10; i++)
   {
-    cout << TableauList1[i] << " ";
+    cout << tableList1[i] << " ";
   }
     cout << endl;
 
   for (int i = 0; i < 10; i++)
-    cout << TableauList2[i] << " ";
+    cout << tableList2[i] << " ";
     cout << endl;
 
   cudaFree(done1);
   cudaFree(done2);
   cudaFree(length1);
   cudaFree(length2);
-  cudaFree(TableauList1);
-  cudaFree(TableauList2);
+  cudaFree(tableList1);
+  cudaFree(tableList2);
+  cudaFree(done);
+  cudaFree(tableList);
+  cudaFree(othertableList);
+  cudaFree(length);
+  cudaFree(otherLength);
   return 0;
 }
