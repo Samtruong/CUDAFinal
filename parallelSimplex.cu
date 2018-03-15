@@ -135,15 +135,14 @@ int main ()
   *done1 = 0;
   int* done2;
   cudaMallocManaged(&done2, sizeof(int));
-  *done2 = 1;
   int * length1;
   cudaMallocManaged(&length1, sizeof(int));
   *length1 = 1;
   int * length2;
   cudaMallocManaged(&length2, sizeof(int));
   *length2 = 0;
-  int numblocks = 1;
-
+  int numblocks = 2;
+  *done2 = numblocks;
   //CPU Logic
   int *done;
   cudaMallocManaged(&done, sizeof(int));
@@ -175,10 +174,11 @@ int main ()
     *otherLength = 0;
     *done1 = 0;
     *done2 = 0;
-     printf("Kernel called\n");
-    branchAndBound<<<numblocks, 1>>> (numblocks,10, done, length, otherLength, tableList, othertableList);
+    printf("Kernel called\n");
+    branchAndBound<<<numblocks, 256>>> (numblocks,10, done, length, otherLength, tableList, othertableList);
+    cudaDeviceSynchronize();
     printf("kernel done\n");
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
   }
   cudaDeviceSynchronize();
   // branchAndBound<<<numblocks, 1>>> (numblocks,10, done1, done2, length1, length2, tableList1, tableList2);
